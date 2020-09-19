@@ -12,8 +12,8 @@ import (
 )
 
 type Pair struct {
-	DeviceID int64 `json:"device_id"`
-	UserID   int64 `json:"user_id"`
+	DeviceID int64 `json:"DeviceID"`
+	UserID   int64 `json:"UserID"`
 }
 
 func main() {
