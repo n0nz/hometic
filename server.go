@@ -80,7 +80,7 @@ func (ph PairDeviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type CreatePairDevice func(p Pair) error
 
-var createPairDatabase = func(p Pair) error {
+func createPairDatabase(p Pair) error {
 	// open database connection
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
