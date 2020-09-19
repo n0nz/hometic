@@ -23,7 +23,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.Handle("/pair-device", PairDeviceHandler(createPairDevice)).Methods(http.MethodPost)
+	r.Handle("/pair-device", PairDeviceHandler(createPairDevice{})).Methods(http.MethodPost)
 	r.Use(Middleware)
 
 	sAddr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
@@ -43,7 +43,7 @@ func Middleware(h http.Handler) http.Handler {
 	})
 }
 
-func PairDeviceHandler(createPairDevice CreatePairDeviceFunc) http.HandlerFunc {
+func PairDeviceHandler(device Device) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -62,7 +62,7 @@ func PairDeviceHandler(createPairDevice CreatePairDeviceFunc) http.HandlerFunc {
 		}
 		fmt.Printf("raw request in struct: %#v\n", p)
 
-		if err = createPairDevice(p); err != nil {
+		if err = device.Pair(p); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			json.NewEncoder(w).Encode(err.Error())
 			return
@@ -74,9 +74,15 @@ func PairDeviceHandler(createPairDevice CreatePairDeviceFunc) http.HandlerFunc {
 	}
 }
 
+type Device interface {
+	Pair(p Pair) error
+}
+
 type CreatePairDeviceFunc func(p Pair) error
 
-func createPairDevice(p Pair) error {
+type createPairDevice struct{}
+
+func (c createPairDevice) Pair(p Pair) error {
 	// open database connection
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
