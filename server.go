@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -16,7 +17,7 @@ func main() {
 
 	r.Use(Middleware)
 
-	sAddr := "127.0.0.1:2009"
+	sAddr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
 	server := http.Server{
 		Addr:    sAddr,
 		Handler: r,
