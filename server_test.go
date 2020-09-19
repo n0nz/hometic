@@ -25,11 +25,9 @@ func TestCreatePairDevice(t *testing.T) {
 	// 	return nil
 	// }
 
-	handler := &PairDeviceHandler{
-		createPairDevice: func(p Pair) error {
-			return nil
-		},
-	}
+	handler := PairDeviceHandler(func(p Pair) error {
+		return nil
+	})
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {

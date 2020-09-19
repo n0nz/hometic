@@ -23,9 +23,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.Handle("/pair-device", &PairDeviceHandler{
-		createPairDevice: createPairDatabase,
-	}).Methods(http.MethodPost)
+	r.Handle("/pair-device", PairDeviceHandler(createPairDatabase)).Methods(http.MethodPost)
 	r.Use(Middleware)
 
 	sAddr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
@@ -45,40 +43,38 @@ func Middleware(h http.Handler) http.Handler {
 	})
 }
 
-type PairDeviceHandler struct {
-	createPairDevice CreatePairDevice
+func PairDeviceHandler(createPairDevice CreatePairDeviceFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		b, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Printf("readall error: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("raw request: %s\n", string(b))
+		defer r.Body.Close()
+
+		var p Pair
+		if err := json.Unmarshal(b, &p); err != nil {
+			log.Printf("unmarshal error: %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		fmt.Printf("raw request in struct: %#v\n", p)
+
+		if err = createPairDevice(p); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(err.Error())
+			return
+		}
+
+		fmt.Println("insert document success.")
+
+		w.Write([]byte(`{"status":"active"}`))
+	}
 }
 
-func (ph PairDeviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("readall error: %v\n", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	fmt.Printf("raw request: %s\n", string(b))
-	defer r.Body.Close()
-
-	var p Pair
-	if err := json.Unmarshal(b, &p); err != nil {
-		log.Printf("unmarshal error: %v\n", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	fmt.Printf("raw request in struct: %#v\n", p)
-
-	if err = ph.createPairDevice(p); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(err.Error())
-		return
-	}
-
-	fmt.Println("insert document success.")
-
-	w.Write([]byte(`{"status":"active"}`))
-}
-
-type CreatePairDevice func(p Pair) error
+type CreatePairDeviceFunc func(p Pair) error
 
 func createPairDatabase(p Pair) error {
 	// open database connection
