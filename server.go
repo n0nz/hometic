@@ -21,10 +21,16 @@ type Pair struct {
 func main() {
 	fmt.Println("hello hometic : I'm Gopher!!")
 
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	r := mux.NewRouter()
 
 	r.Handle("/pair-device",
-		PairDeviceHandler(CreatePairDeviceFunc(createPairDevice))).
+		PairDeviceHandler(NewCreatePairDevice(db))).
 		Methods(http.MethodPost)
 
 	r.Use(Middleware)
@@ -99,21 +105,16 @@ func (fn CreatePairDeviceFunc) Pair(p Pair) error {
 	return fn(p)
 }
 
-func createPairDevice(p Pair) error {
-	// open database connection
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
+func NewCreatePairDevice(db *sql.DB) CreatePairDeviceFunc {
+	return func(p Pair) error {
+		// insert Pair obj
+		_, err := db.Exec(`INSERT INTO pairs VALUES ($1,$2);`,
+			p.DeviceID, p.UserID)
+		if err != nil {
+			log.Printf("can't insert doc %#v into table, error: %#v\n", p, err)
+			return err
+		}
 
-	// insert Pair obj
-	_, err = db.Exec(`INSERT INTO pairs VALUES ($1,$2);`,
-		p.DeviceID, p.UserID)
-	if err != nil {
-		log.Printf("can't insert doc %#v into table, error: %#v\n", p, err)
-		return err
+		return nil
 	}
-
-	return nil
 }
