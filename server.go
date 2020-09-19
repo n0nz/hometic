@@ -23,7 +23,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	r.Handle("/pair-device", PairDeviceHandler(createPairDatabase)).Methods(http.MethodPost)
+	r.Handle("/pair-device", PairDeviceHandler(createPairDevice)).Methods(http.MethodPost)
 	r.Use(Middleware)
 
 	sAddr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
@@ -76,7 +76,7 @@ func PairDeviceHandler(createPairDevice CreatePairDeviceFunc) http.HandlerFunc {
 
 type CreatePairDeviceFunc func(p Pair) error
 
-func createPairDatabase(p Pair) error {
+func createPairDevice(p Pair) error {
 	// open database connection
 	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {

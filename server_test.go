@@ -16,11 +16,11 @@ func TestCreatePairDevice(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// #1
-	// origin := createPairDatabase
+	// origin := createPairDevice
 	// defer func() {
-	// 	createPairDatabase = origin
+	// 	createPairDevice = origin
 	// }()
-	// createPairDatabase = func(p Pair) error {
+	// createPairDevice = func(p Pair) error {
 	// 	log.Printf("connected to fake database!\n")
 	// 	return nil
 	// }
