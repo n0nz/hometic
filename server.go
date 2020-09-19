@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +10,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
 type Pair struct {
@@ -58,6 +60,26 @@ func PairDeviceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("raw request in struct: %#v\n", rawRequest)
+
+	// open database connection
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Println("connect to database error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// insert Pair obj
+	_, err = db.Exec(`INSERT INTO pairs VALUES ($1,$2);`,
+		rawRequest.DeviceID, rawRequest.UserID)
+	if err != nil {
+		log.Printf("can't insert doc %#v into table, error: %#v\n", rawRequest, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("insert document success.")
 
 	w.Write([]byte(`{"status":"active"}`))
 }
