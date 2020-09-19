@@ -83,10 +83,6 @@ func PairDeviceHandler(device Device) http.HandlerFunc {
 	}
 }
 
-type Device interface {
-	Pair(p Pair) error
-}
-
 // Example from: net/http/server.go
 // The HandlerFunc type is an adapter to allow the use of
 // ordinary functions as HTTP handlers. If f is a function
@@ -97,6 +93,10 @@ type HandlerFunc func(http.ResponseWriter, *http.Request)
 // ServeHTTP calls f(w, r).
 func (f HandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f(w, r)
+}
+
+type Device interface {
+	Pair(p Pair) error
 }
 
 type CreatePairDeviceFunc func(p Pair) error
