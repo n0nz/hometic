@@ -15,7 +15,22 @@ func TestCreatePairDevice(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/pair-device", payload)
 	rec := httptest.NewRecorder()
 
-	PairDeviceHandler(rec, req)
+	// #1
+	// origin := createPairDatabase
+	// defer func() {
+	// 	createPairDatabase = origin
+	// }()
+	// createPairDatabase = func(p Pair) error {
+	// 	log.Printf("connected to fake database!\n")
+	// 	return nil
+	// }
+
+	handler := &PairDeviceHandler{
+		createPairDevice: func(p Pair) error {
+			return nil
+		},
+	}
+	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected %d, but got %d", http.StatusOK, rec.Code)

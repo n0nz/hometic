@@ -22,8 +22,10 @@ func main() {
 	fmt.Println("hello hometic : I'm Gopher!!")
 
 	r := mux.NewRouter()
-	r.HandleFunc("/pair-device", PairDeviceHandler).Methods(http.MethodPost)
 
+	r.Handle("/pair-device", &PairDeviceHandler{
+		createPairDevice: createPairDatabase,
+	}).Methods(http.MethodPost)
 	r.Use(Middleware)
 
 	sAddr := fmt.Sprintf("0.0.0.0:%s", os.Getenv("PORT"))
@@ -43,7 +45,11 @@ func Middleware(h http.Handler) http.Handler {
 	})
 }
 
-func PairDeviceHandler(w http.ResponseWriter, r *http.Request) {
+type PairDeviceHandler struct {
+	createPairDevice CreatePairDevice
+}
+
+func (ph PairDeviceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("readall error: %v\n", err)
@@ -53,33 +59,42 @@ func PairDeviceHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("raw request: %s\n", string(b))
 	defer r.Body.Close()
 
-	var rawRequest Pair
-	if err := json.Unmarshal(b, &rawRequest); err != nil {
+	var p Pair
+	if err := json.Unmarshal(b, &p); err != nil {
 		log.Printf("unmarshal error: %v\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Printf("raw request in struct: %#v\n", rawRequest)
+	fmt.Printf("raw request in struct: %#v\n", p)
 
-	// open database connection
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		log.Println("connect to database error", err)
+	if err = ph.createPairDevice(p); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer db.Close()
-
-	// insert Pair obj
-	_, err = db.Exec(`INSERT INTO pairs VALUES ($1,$2);`,
-		rawRequest.DeviceID, rawRequest.UserID)
-	if err != nil {
-		log.Printf("can't insert doc %#v into table, error: %#v\n", rawRequest, err)
-		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
 
 	fmt.Println("insert document success.")
 
 	w.Write([]byte(`{"status":"active"}`))
+}
+
+type CreatePairDevice func(p Pair) error
+
+var createPairDatabase = func(p Pair) error {
+	// open database connection
+	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// insert Pair obj
+	_, err = db.Exec(`INSERT INTO pairs VALUES ($1,$2);`,
+		p.DeviceID, p.UserID)
+	if err != nil {
+		log.Printf("can't insert doc %#v into table, error: %#v\n", p, err)
+		return err
+	}
+
+	return nil
 }
